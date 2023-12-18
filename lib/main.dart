@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'mcdata.dart';
 
 void main() {
   runApp(MyApp());
@@ -7,16 +9,43 @@ void main() {
 class Block {
   final String name;
   final String id;
-
+  int count = 0;
   Block({required this.name, required this.id});
 }
 
 class BlockTracker {
   Map<String, int> blockCounts = {};
   List<int> previousBlockCounts = [];
-  List<Block> availableBlocks = [
-   //Code to select Block
-  ];
+
+  List<Block> availableBlocks = <Block>[];
+    List<Block> availableBlocks = [
+   Block(name: 'Dirt', id: 'minecraft:dirt'),
+   Block(name: 'Stone', id: 'minecraft:stone'),
+  // Add more blocks as needed
+   ];
+
+  BlockTracker() {
+    fetchBlocksFromAPI();
+  }
+
+  fetchBlocksFromAPI()  async {
+    final response = await http
+        .get(Uri.parse('https://raw.githubusercontent.com/PrismarineJS/minecraft-data/master/data/pc/1.9/blocks.json'));
+    print("Response status = "+response.statusCode.toString());
+    //print("Response body = "+response.body);
+    if (response.statusCode == 200) {
+      // If the server did return a 200 OK response, then parse the JSON.
+      print("Parsing block data");
+      List<Mcdata>  blcokList = mcdataFromJson(response.body);
+      print("Number of blocks = "+blcokList.length.toString());
+      for (Mcdata mcBlock in blcokList) {
+        availableBlocks.add(new Block(name: mcBlock.name, id: mcBlock.id.toString()) );
+      }
+    } else {
+      // If the server did not return a 200 OK response, then throw an exception.
+      throw Exception('Failed to load teams');
+    }
+  }
 
   void addBlock(Block block) {
     final blockId = block.id;
@@ -47,7 +76,13 @@ class MyApp extends StatelessWidget {
                 items: blockTracker.availableBlocks.map((Block block) {
                   return DropdownMenuItem<Block>(
                     value: block,
-                    child: Text(block.name),
+                    child: Row(
+                      children: [
+                        Text(block.name),
+                        Text(" --- count: "),
+                        Text(block.count.toString()),
+                      ],
+                    ),
                   );
                 }).toList(),
                 onChanged: (Block? selectedBlock) {
